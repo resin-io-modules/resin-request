@@ -38,7 +38,10 @@ import type * as Stream from 'stream';
  *
  * return responseStream.pipe(progressStream).pipe(output)
  */
-const getProgressStream = function (total, onState) {
+const getProgressStream = function (
+	total: number | undefined,
+	onState?: (chunk: any) => void,
+) {
 	const progress = require('progress-stream') as typeof import('progress-stream');
 	const progressStream = progress({
 		time: 500,
@@ -126,7 +129,9 @@ export function estimate(
 
 		let responseStream: any;
 		if (response.body.getReader) {
-			const webStreams = require('@balena/node-web-streams') as typeof import('@balena/node-web-streams');
+			const webStreams = require('@balena/node-web-streams') as {
+				toNodeReadable(body: any): any;
+			};
 			// Convert browser (WHATWG) streams to Node streams
 			responseStream = webStreams.toNodeReadable(response.body);
 			reader = responseStream._reader;
@@ -157,7 +162,7 @@ export function estimate(
 		}
 
 		// Stream any request errors on downstream
-		responseStream.on('error', (e) => output.emit('error', e));
+		responseStream.on('error', (e: Error) => output.emit('error', e));
 
 		return output;
 	};

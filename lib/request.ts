@@ -19,7 +19,8 @@ limitations under the License.
  */
 
 import type BalenaAuth from 'balena-auth';
-import type { Readable } from 'stream';
+import type * as Stream from 'stream';
+
 import * as urlLib from 'url';
 import * as errors from 'balena-errors';
 import * as utils from './utils';
@@ -55,7 +56,12 @@ export interface BalenaRequestResponse<T = any> extends Omit<Response, 'body'> {
 	};
 }
 
-export interface BalenaRequestStreamResult extends Readable {
+export interface BalenaRequestPassThroughStream extends Stream.PassThrough {
+	response: BalenaRequestResponse;
+	mime?: string | null;
+}
+
+export interface BalenaRequestStreamResult extends Stream.Readable {
 	mime: string;
 }
 
@@ -91,9 +97,7 @@ export function getRequest({
 }: RequestFactoryOptions) {
 	const requestAsync = utils.getRequestAsync();
 	const requestStream = isBrowser
-		? utils.getRequestAsync(
-				require('fetch-readablestream') as typeof import('fetch-readablestream'),
-		  )
+		? utils.getRequestAsync(require('fetch-readablestream') as typeof fetch)
 		: requestAsync;
 
 	const debugRequest = !debug
@@ -166,19 +170,22 @@ export function getRequest({
 		return options;
 	};
 
-	const interceptRequestOptions = (requestOptions) =>
+	const interceptRequestOptions = (requestOptions: BalenaRequestOptions) =>
 		interceptRequestOrError(Promise.resolve(requestOptions));
 
-	const interceptRequestError = (requestError) =>
+	const interceptRequestError = (requestError: errors.BalenaRequestError) =>
 		interceptRequestOrError(Promise.reject(requestError));
 
-	const interceptResponse = (response) =>
-		interceptResponseOrError(Promise.resolve(response));
+	const interceptResponse = <
+		T extends BalenaRequestResponse | BalenaRequestPassThroughStream
+	>(
+		response: T,
+	): Promise<T> => interceptResponseOrError(Promise.resolve(response));
 
-	const interceptResponseError = (responseError) =>
+	const interceptResponseError = (responseError: errors.BalenaRequestError) =>
 		interceptResponseOrError(Promise.reject(responseError));
 
-	const interceptRequestOrError = async (initialPromise) =>
+	const interceptRequestOrError = async (initialPromise: Promise<any>) =>
 		exports.interceptors.reduce(function (promise, { request, requestError }) {
 			if (request != null || requestError != null) {
 				return promise.then(request, requestError);
@@ -187,7 +194,9 @@ export function getRequest({
 			}
 		}, initialPromise);
 
-	const interceptResponseOrError = async function (initialPromise) {
+	const interceptResponseOrError = async function (
+		initialPromise: Promise<any>,
+	) {
 		return exports.interceptors
 			.slice()
 			.reverse()
@@ -260,7 +269,7 @@ export function getRequest({
 		return prepareOptions(options)
 			.then(interceptRequestOptions, interceptRequestError)
 			.then(async (opts) => {
-				let response;
+				let response: BalenaRequestResponse | undefined;
 				try {
 					response = await requestAsync(opts);
 				} catch (err) {
@@ -369,7 +378,7 @@ export function getRequest({
 					download.response.statusCode,
 				);
 			})
-			.then(interceptResponse, interceptResponseError);
+			.then((x) => interceptResponse(x), interceptResponseError);
 	}
 
 	/**

@@ -282,9 +282,10 @@ const processRequestOptions = function (options: BalenaRequestOptions) {
 	}
 
 	for (const key of UNSUPPORTED_REQUEST_PARAMS) {
-		if (options[key] != null) {
+		const unsupportedOptionValue = options[key as keyof typeof options];
+		if (unsupportedOptionValue != null) {
 			throw new Error(
-				`The ${key} param is not supported. Value: ${options[key]}`,
+				`The ${key} param is not supported. Value: ${unsupportedOptionValue}`,
 			);
 		}
 	}
@@ -317,7 +318,10 @@ const processRequestOptions = function (options: BalenaRequestOptions) {
  * utils.getBody(response).then (body) ->
  * 	console.log(body)
  */
-export async function getBody(response: BalenaRequestResponse, responseFormat) {
+export async function getBody(
+	response: BalenaRequestResponse,
+	responseFormat?: string,
+) {
 	if (responseFormat === 'none') {
 		return null;
 	}
@@ -417,7 +421,10 @@ async function requestAsync(
 	}
 }
 
-function handleAbortIfNotSupported(signal, response) {
+function handleAbortIfNotSupported(
+	signal: AbortSignal,
+	response: BalenaRequestResponse,
+) {
 	const emulateAbort = (() => {
 		if (response.body?.cancel) {
 			// We have an XHR-emulated stream - cancel kills the underlying XHR
