@@ -109,10 +109,6 @@ export function getRequest({
 		: utils.debugRequest;
 
 	const prepareOptions = async function (options: BalenaRequestOptions) {
-		if (options == null) {
-			options = {} as BalenaRequestOptions;
-		}
-
 		const { baseUrl } = options;
 
 		options = {
