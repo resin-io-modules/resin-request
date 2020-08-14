@@ -14,11 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import type { PonyfilledFetch, FetchPonyfill } from './typings/fetch-ponyfill';
 const {
 	fetch: normalFetch,
 	Headers: HeadersPonyfill,
-} = (require('fetch-ponyfill') as FetchPonyfill)({ Promise });
+} = (require('fetch-ponyfill') as typeof import('fetch-ponyfill'))({ Promise });
 
 import * as urlLib from 'url';
 import * as qs from 'qs';
@@ -462,6 +461,6 @@ function handleAbortIfNotSupported(signal, response) {
  * utils.getRequestAsync()({ url: 'http://example.com' }).then (response) ->
  * 	console.log(response)
  */
-export function getRequestAsync(fetch: PonyfilledFetch = normalFetch) {
-	return (options: BalenaRequestOptions) => requestAsync(fetch, options);
+export function getRequestAsync($fetch: typeof fetch = normalFetch) {
+	return (options: BalenaRequestOptions) => requestAsync($fetch, options);
 }

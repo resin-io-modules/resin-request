@@ -15,8 +15,9 @@ limitations under the License.
 */
 
 import * as utils from './utils';
-import type { BalenaRequestOptions } from './request';
+import type { BalenaRequestOptions, BalenaRequestResponse } from './request';
 import type { getRequestAsync } from './utils';
+import type * as Stream from 'stream';
 
 /**
  * @module progress
@@ -38,7 +39,7 @@ import type { getRequestAsync } from './utils';
  * return responseStream.pipe(progressStream).pipe(output)
  */
 const getProgressStream = function (total, onState) {
-	const progress = require('progress-stream');
+	const progress = require('progress-stream') as typeof import('progress-stream');
 	const progressStream = progress({
 		time: 500,
 		length: total,
@@ -62,6 +63,11 @@ const getProgressStream = function (total, onState) {
 	return progressStream;
 };
 
+export interface BalenaRequestPassThroughStream extends Stream.PassThrough {
+	response: BalenaRequestResponse;
+	mime?: string | null;
+}
+
 /**
  * @summary Make a node request with progress
  * @function
@@ -79,7 +85,9 @@ export function estimate(
 	requestAsync?: ReturnType<typeof getRequestAsync>,
 	isBrowser?: boolean,
 ) {
-	return async function (options: BalenaRequestOptions) {
+	return async function (
+		options: BalenaRequestOptions,
+	): Promise<BalenaRequestPassThroughStream> {
 		if (requestAsync == null) {
 			requestAsync = utils.getRequestAsync();
 		}
@@ -108,8 +116,8 @@ export function estimate(
 
 		const response = await requestAsync(options);
 
-		const stream = require('stream');
-		const output = new stream.PassThrough();
+		const stream = require('stream') as typeof Stream;
+		const output = new stream.PassThrough() as BalenaRequestPassThroughStream;
 
 		output.response = response;
 
@@ -118,7 +126,7 @@ export function estimate(
 
 		let responseStream: any;
 		if (response.body.getReader) {
-			const webStreams = require('@balena/node-web-streams');
+			const webStreams = require('@balena/node-web-streams') as typeof import('@balena/node-web-streams');
 			// Convert browser (WHATWG) streams to Node streams
 			responseStream = webStreams.toNodeReadable(response.body);
 			reader = responseStream._reader;
@@ -131,7 +139,7 @@ export function estimate(
 		);
 
 		if (!isBrowser && utils.isResponseCompressed(response)) {
-			const { createGunzip } = require('zlib');
+			const { createGunzip } = require('zlib') as typeof import('zlib');
 			const gunzip = createGunzip();
 
 			// Uncompress after or before piping through progress

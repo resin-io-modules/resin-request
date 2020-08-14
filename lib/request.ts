@@ -91,7 +91,9 @@ export function getRequest({
 }: RequestFactoryOptions) {
 	const requestAsync = utils.getRequestAsync();
 	const requestStream = isBrowser
-		? utils.getRequestAsync(require('fetch-readablestream'))
+		? utils.getRequestAsync(
+				require('fetch-readablestream') as typeof import('fetch-readablestream'),
+		  )
 		: requestAsync;
 
 	const debugRequest = !debug
