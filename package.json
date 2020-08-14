@@ -18,8 +18,8 @@
     "test": "tests"
   },
   "scripts": {
-    "lint": "balena-lint -e js -e ts --typescript lib",
-    "lint-fix": "balena-lint -e js -e ts --typescript --fix lib",
+    "lint": "balena-lint -e ts --typescript lib",
+    "lint-fix": "balena-lint -e ts --typescript --fix lib",
     "pretest": "npm run build",
     "test": "npm run test-node && npm run test-browser",
     "posttest": "npm run lint",
