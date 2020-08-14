@@ -250,15 +250,9 @@ export function getRequest({
 	 * 		hello: 'world'
 	 * .get('body')
 	 */
-	async function send(
+	async function send<T = any>(
 		options: BalenaRequestOptions,
-	): Promise<BalenaRequestResponse>;
-	async function send<T>(
-		options: BalenaRequestOptions,
-	): Promise<BalenaRequestResponse<T>>;
-	async function send(
-		options: BalenaRequestOptions,
-	): Promise<BalenaRequestResponse> {
+	): Promise<BalenaRequestResponse<T>> {
 		// Only set the default timeout when doing a normal HTTP
 		// request and not also when streaming since in the latter
 		// case we might cause unnecessary ESOCKETTIMEDOUT errors.
