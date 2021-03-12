@@ -239,6 +239,12 @@ describe 'Request (token):', ->
 				auth.setKey(johnDoeFixture.token)
 				mockServer.get('/user/v1/refresh-token').thenReply(200, janeDoeFixture.token)
 
+			it 'should error when the baseUrl is not provided', ->
+				auth.getKey().then (savedToken) ->
+					m.chai.expect(savedToken).to.equal(johnDoeFixture.token)
+					promise = request.refreshToken({})
+					m.chai.expect(promise).to.be.rejectedWith('The baseUrl parameter is required')
+
 			it 'should refresh the token', ->
 				auth.getKey().then (savedToken) ->
 					m.chai.expect(savedToken).to.equal(johnDoeFixture.token)

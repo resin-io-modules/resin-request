@@ -15,6 +15,9 @@ limitations under the License.
 */
 
 import * as utils from './utils';
+import type { BalenaRequestOptions, BalenaRequestResponse } from './request';
+import type { getRequestAsync } from './utils';
+import type * as Stream from 'stream';
 
 /**
  * @module progress
@@ -35,8 +38,11 @@ import * as utils from './utils';
  *
  * return responseStream.pipe(progressStream).pipe(output)
  */
-const getProgressStream = function (total, onState) {
-	const progress = require('progress-stream');
+const getProgressStream = function (
+	total: number | undefined,
+	onState?: (chunk: any) => void,
+) {
+	const progress = require('progress-stream') as typeof import('progress-stream');
 	const progressStream = progress({
 		time: 500,
 		length: total,
@@ -60,12 +66,25 @@ const getProgressStream = function (total, onState) {
 	return progressStream;
 };
 
+export interface BalenaRequestPassThroughStream extends Stream.PassThrough {
+	response: BalenaRequestResponse;
+	mime?: string | null;
+}
+
+/**
+ * This callback is displayed as a global member.
+ * @callback estimateStreamCallback
+ * @param {BalenaRequestOptions} options
+ *
+ * @returns {Promise<NodeJS.ReadableStream>} request stream
+ */
+
 /**
  * @summary Make a node request with progress
  * @function
  * @protected
  *
- * @returns {(options) => Promise<NodeJS.ReadableStream>} request stream
+ * @returns {estimateStreamCallback} request stream callback
  *
  * @example
  * progress.estimate(options).then (stream) ->
@@ -73,16 +92,17 @@ const getProgressStream = function (total, onState) {
  * 		stream.on 'progress', (state) ->
  * 			console.log(state)
  */
-export function estimate(requestAsync, isBrowser) {
-	return async function (options) {
-		if (requestAsync == null) {
-			requestAsync = utils.getRequestAsync();
-		}
-
+export function estimate(
+	requestAsync: ReturnType<typeof getRequestAsync> = utils.getRequestAsync(),
+	isBrowser?: boolean,
+) {
+	return async function (
+		options: BalenaRequestOptions,
+	): Promise<BalenaRequestPassThroughStream> {
 		options.gzip = false;
-		options.headers['Accept-Encoding'] = 'gzip, deflate';
+		options.headers!['Accept-Encoding'] = 'gzip, deflate';
 
-		let reader = null;
+		let reader: any = null;
 
 		if (options.signal != null) {
 			options.signal.addEventListener(
@@ -103,17 +123,19 @@ export function estimate(requestAsync, isBrowser) {
 
 		const response = await requestAsync(options);
 
-		const stream = require('stream');
-		const output = new stream.PassThrough();
-		// @ts-expect-error
+		const stream = require('stream') as typeof Stream;
+		const output = new stream.PassThrough() as BalenaRequestPassThroughStream;
+
 		output.response = response;
 
 		const responseLength = utils.getResponseLength(response);
 		const total = responseLength.uncompressed || responseLength.compressed;
 
-		let responseStream;
+		let responseStream: any;
 		if (response.body.getReader) {
-			const webStreams = require('@balena/node-web-streams');
+			const webStreams = require('@balena/node-web-streams') as {
+				toNodeReadable(body: any): any;
+			};
 			// Convert browser (WHATWG) streams to Node streams
 			responseStream = webStreams.toNodeReadable(response.body);
 			reader = responseStream._reader;
@@ -126,7 +148,7 @@ export function estimate(requestAsync, isBrowser) {
 		);
 
 		if (!isBrowser && utils.isResponseCompressed(response)) {
-			const { createGunzip } = require('zlib');
+			const { createGunzip } = require('zlib') as typeof import('zlib');
 			const gunzip = createGunzip();
 
 			// Uncompress after or before piping through progress
@@ -144,7 +166,7 @@ export function estimate(requestAsync, isBrowser) {
 		}
 
 		// Stream any request errors on downstream
-		responseStream.on('error', (e) => output.emit('error', e));
+		responseStream.on('error', (e: Error) => output.emit('error', e));
 
 		return output;
 	};
